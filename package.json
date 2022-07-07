@@ -15,6 +15,17 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.27.2",
-    "node-fetch": "^3.2.6"
-  }
+    "fs": "^0.0.1-security",
+    "node-fetch": "^3.2.6",
+    "webpack-sources": "^3.2.3"
+  },
+  "name": "hantry-webpack",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hkh0105/Hantry-WebPack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hkh0105/Hantry-WebPack/issues"
+  },
+  "homepage": "https://github.com/hkh0105/Hantry-WebPack#readme"
 }
