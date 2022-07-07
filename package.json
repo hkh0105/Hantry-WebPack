@@ -16,5 +16,15 @@
   "dependencies": {
     "axios": "^0.27.2",
     "node-fetch": "^3.2.6"
-  }
+  },
+  "name": "hantry-webpack",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hkh0105/Hantry-WebPack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hkh0105/Hantry-WebPack/issues"
+  },
+  "homepage": "https://github.com/hkh0105/Hantry-WebPack#readme"
 }

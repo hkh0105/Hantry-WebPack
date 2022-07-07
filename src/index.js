@@ -1,9 +1,11 @@
 const axios = require("axios");
 
 class HantryPlugin {
-  constructor(options) {
+  constructor(options, name, dsn) {
     this.options = options;
-    this.serverUrl = `http://localhost:8080/users`;
+    this.name = name;
+    this.serverUrl = `http://localhost:8000/users`;
+    this.dsn = dsn;
   }
 
   apply(compiler) {
@@ -30,15 +32,38 @@ class HantryPlugin {
 
         const errorList = { errorInfo: errorCollection };
 
-        await this.sendErrorApi(this.options.projectToken, errorList);
+        await this.sendErrorApi(this.dsn, errorList);
         callback();
       },
     );
   }
 
-  sendErrorApi(projectToken, errorList) {
+  apply(compiler) {
+    compiler.hooks.afterEmit.tapAsync("HantryPlugin", async compilation => {
+      if (compilation.emittedAssets.has(`${name}.js.map`)) {
+        const sourceMap = fs.readFileSync(`./dist/${name}.js.map`, "utf-8");
+        const source = fs.readFileSync(`./dist/${name}.js`, "utf-8");
+        sendSourceMapApi(source, source, this.dsn);
+      }
+    });
+  }
+
+  sendErrorApi(dsn, errorList) {
     return axios
-      .post(`${this.serverUrl}/project/${projectToken}/error`, errorList)
+      .post(`${this.serverUrl}/project/${dsn}/error`, errorList)
+      .then(res => {
+        console.log(res.data);
+        console.log("Hantry: error recorded");
+      });
+  }
+
+  sendSourceMapApi(sourceMap, source, dsn) {
+    console.log(sourceMap, source);
+    return axios
+      .post(`${this.serverUrl}/project/${dsn}/sourceMap`, {
+        sourceMap,
+        source,
+      })
       .then(res => {
         console.log(res.data);
         console.log("Hantry: error recorded");
