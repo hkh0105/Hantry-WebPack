@@ -40,14 +40,14 @@ class HantryPlugin {
 
   apply(compiler) {
     compiler.hooks.afterEmit.tapAsync("HantryPlugin", async compilation => {
-      console.log(this.name);
       if (compilation.emittedAssets.has(`${this.name}.js.map`)) {
         const sourceMap = fs.readFileSync(
           `./dist/${this.name}.js.map`,
           "utf-8",
         );
         const source = fs.readFileSync(`./dist/${this.name}.js`, "utf-8");
-        sendSourceMapApi(source, source, this.dsn);
+        console.log(sourceMap);
+        sendSourceMapApi(sourceMap, source, this.dsn);
       }
     });
   }
@@ -56,20 +56,17 @@ class HantryPlugin {
     return axios
       .post(`${this.serverUrl}/project/${dsn}/error`, errorList)
       .then(res => {
-        console.log(res.data);
         console.log("Hantry: error recorded");
       });
   }
 
   sendSourceMapApi(sourceMap, source, dsn) {
-    console.log(sourceMap, source);
     return axios
       .post(`${this.serverUrl}/project/${dsn}/sourceMap`, {
         sourceMap,
         source,
       })
       .then(res => {
-        console.log(res.data);
         console.log("Hantry: error recorded");
       });
   }

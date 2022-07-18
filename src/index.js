@@ -1,29 +1,42 @@
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
-const { getSourceMap } = require("./utils");
+const { getSourceMap, parseErrorStack } = require("./utils");
 
-function attachAfterCodeGenerationHook(compiler) {
-  if (!compiler.hooks || !compiler.hooks.make) {
-    return;
-  }
+function sendErrorApi(dsn, error) {
+  return axios
+    .post(`http://localhost:8000/users/project/${dsn}/error`, error)
+    .then(res => {
+      console.log("Hantry: error recorded");
+    });
+}
 
-  let sourceMap;
-  let bundledSource;
+function getError(compiler, dsn) {
+  compiler.hooks.emit.tap("HantryPlugin", (compilation, callback) => {
+    console.log("first");
+    if (!compilation.errors.length) {
+      return;
+    }
 
-  compiler.hooks.done.tapAsync("HantryPlugin", (stats, callback) => {
-    const sourceMapFileName = stats.compilation.outputOptions.sourceMapFilename;
-    const bundledSourceFileName = stats.compilation.outputOptions.filename;
-    sourceMap = fs.readFileSync(
-      path.join(stats.compilation.outputOptions.path, sourceMapFileName),
-      "utf8",
-    );
-    bundledSource = fs.readFileSync(
-      path.join(stats.compilation.outputOptions.path, bundledSourceFileName),
-      "utf8",
-    );
+    const errorCollection = compilation.errors.map(err => {
+      let targetError = err.error.stack ? err.error : err;
+      const stack = parseErrorStack(targetError.stack.split("\n"));
+      return {
+        type: targetError.name,
+        message: targetError.message.split("\n")[0],
+        stack: targetError.stack.split("\n"),
+        location: {
+          lineno: targetError.loc && targetError.loc.line,
+          colno: targetError.loc && targetError.loc.column,
+        },
+        source: err.module.resource,
+        created_at: new Date(),
+      };
+    });
+    errorCollection.map(error => {
+      return sendErrorApi(dsn, error);
+    });
   });
-  return { sourceMap, bundledSource };
 }
 
 class HantryPlugin {
@@ -31,37 +44,6 @@ class HantryPlugin {
     this.options = options;
     this.serverUrl = `http://localhost:8000/users`;
     this.dsn = dsn;
-    this.options.ignore = ["node_modules"];
-  }
-
-  apply(compiler) {
-    compiler.hooks.emit.tapAsync(
-      "HantryPlugin",
-      async (compilation, callback) => {
-        if (!compilation.errors.length) {
-          return callback();
-        }
-
-        const errorCollection = compilation.errors.map(err => {
-          let targetError = err.error.stack ? err.error : err;
-          return {
-            name: targetError.name,
-            message: targetError.message.split("\n")[0],
-            stack: targetError.stack,
-            lineno: targetError.loc && targetError.loc.line,
-            colno: targetError.loc && targetError.loc.column,
-            filename: err.module.resource,
-            duplicate_count: 1,
-            created_at: new Date(),
-          };
-        });
-
-        const errorList = { errorInfo: errorCollection };
-
-        await this.sendErrorApi(this.dsn, errorList);
-        callback();
-      },
-    );
   }
 
   apply(compiler) {
@@ -70,8 +52,10 @@ class HantryPlugin {
       typeof compilerOptions.module !== "undefined"
         ? compilerOptions.module
         : factory();
+    getError(compiler, this.dsn);
 
     compiler.hooks.done.tapAsync("HantryPlugin", (stats, callback) => {
+      console.log("second");
       const sourceMapFileName =
         stats.compilation.outputOptions.sourceMapFilename;
       const bundledSourceFileName = stats.compilation.outputOptions.filename;
@@ -85,35 +69,17 @@ class HantryPlugin {
       );
 
       this.sendSourceMapApi(sourceMap, bundledSource, this.dsn);
+      callback();
     });
-    // const { sourceMap, bundledSource } =
-    //   attachAfterCodeGenerationHook(compiler);
-  }
-
-  sendErrorApi(dsn, errorList) {
-    return axios
-      .post(`${this.serverUrl}/project/${dsn}/error`, errorList)
-      .then(res => {
-        console.log(res.data);
-        console.log("Hantry: error recorded");
-      });
   }
 
   sendSourceMapApi(sourceMap, bundledSource, dsn) {
     return axios
-      .post(
-        `${this.serverUrl}/project/${dsn}/sourceMap`,
-        {
-          sourceMap,
-          bundledSource,
-        },
-        {
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity,
-        },
-      )
+      .post(`${this.serverUrl}/project/${dsn}/sourceMap`, {
+        sourceMap,
+        bundledSource,
+      })
       .then(res => {
-        console.log(res.data);
         console.log("Hantry: error recorded");
       });
   }
