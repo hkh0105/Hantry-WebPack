@@ -39,17 +39,19 @@ class HantryPlugin {
   }
 
   apply(compiler) {
-    compiler.hooks.afterEmit.tapAsync("HantryPlugin", async compilation => {
-      if (compilation.emittedAssets.has(`${this.name}.js.map`)) {
-        const sourceMap = fs.readFileSync(
-          `./dist/${this.name}.js.map`,
-          "utf-8",
-        );
-        const source = fs.readFileSync(`./dist/${this.name}.js`, "utf-8");
-        console.log(sourceMap);
-        sendSourceMapApi(sourceMap, source, this.dsn);
-      }
-    });
+    if (this.options.sourceMap) {
+      compiler.hooks.afterEmit.tapAsync("HantryPlugin", async compilation => {
+        if (compilation.emittedAssets.has(`${this.name}.js.map`)) {
+          const sourceMap = fs.readFileSync(
+            `./dist/${this.name}.js.map`,
+            "utf-8",
+          );
+
+          const source = fs.readFileSync(`./dist/${this.name}.js`, "utf-8");
+          sendSourceMapApi(sourceMap, source, this.dsn);
+        }
+      });
+    }
   }
 
   sendErrorApi(dsn, errorList) {

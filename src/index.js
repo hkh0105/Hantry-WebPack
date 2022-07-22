@@ -1,3 +1,4 @@
+const { throws } = require("assert");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
@@ -5,7 +6,7 @@ const { getSourceMap, parseErrorStack } = require("./utils");
 
 function sendErrorApi(dsn, error) {
   return axios
-    .post(`http://localhost:8000/users/project/${dsn}/error`, error)
+    .post(`https://hantry.click/users/project/${dsn}/error`, error)
     .then(res => {
       console.log("Hantry: error recorded");
     });
@@ -40,9 +41,9 @@ function getError(compiler, dsn) {
 }
 
 class HantryPlugin {
-  constructor(options, dsn) {
+  constructor(dsn, options) {
     this.options = options;
-    this.serverUrl = `http://localhost:8000/users`;
+    this.serverUrl = `https://hantry.click/users`;
     this.dsn = dsn;
   }
 
@@ -52,25 +53,30 @@ class HantryPlugin {
       typeof compilerOptions.module !== "undefined"
         ? compilerOptions.module
         : factory();
+
     getError(compiler, this.dsn);
 
-    compiler.hooks.done.tapAsync("HantryPlugin", (stats, callback) => {
-      console.log("second");
-      const sourceMapFileName =
-        stats.compilation.outputOptions.sourceMapFilename;
-      const bundledSourceFileName = stats.compilation.outputOptions.filename;
-      const sourceMap = fs.readFileSync(
-        path.join(stats.compilation.outputOptions.path, sourceMapFileName),
-        "utf8",
-      );
-      const bundledSource = fs.readFileSync(
-        path.join(stats.compilation.outputOptions.path, bundledSourceFileName),
-        "utf8",
-      );
+    if (this.options && this.options.sourceMap) {
+      compiler.hooks.done.tapAsync("HantryPlugin", (stats, callback) => {
+        const sourceMapFileName =
+          stats.compilation.outputOptions.sourceMapFilename;
+        const bundledSourceFileName = stats.compilation.outputOptions.filename;
+        const sourceMap = fs.readFileSync(
+          path.join(stats.compilation.outputOptions.path, sourceMapFileName),
+          "utf8",
+        );
+        const bundledSource = fs.readFileSync(
+          path.join(
+            stats.compilation.outputOptions.path,
+            bundledSourceFileName,
+          ),
+          "utf8",
+        );
 
-      this.sendSourceMapApi(sourceMap, bundledSource, this.dsn);
-      callback();
-    });
+        this.sendSourceMapApi(sourceMap, bundledSource, this.dsn);
+        callback();
+      });
+    }
   }
 
   sendSourceMapApi(sourceMap, bundledSource, dsn) {
