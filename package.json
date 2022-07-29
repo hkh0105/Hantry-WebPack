@@ -1,5 +1,5 @@
 {
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "compile error tracker",
   "main": "./src/index.js",
   "scripts": {
