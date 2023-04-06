@@ -174,3 +174,16 @@ Settings 페이지에서는 Project Create 시 했던 정보들을 수정할 수
   **Slack Bot**을 만든 후, Oauth 인증을 거쳐 배포시켰습니다. Setting에서 제공하는 버튼으로 **Hantry Slack bot**을 워크스페이스에 추가한 후 Slash 명령어를 통해 구독하면, **Slack Bot**이 에러가 발생했을 시 자동으로 메세지를 보내주게 했습니다. 지금은 백엔드 서버에 같이 존재하지만 추후 lamda 서버를 따로 팔 예정입니다.
 
 - **PerformanceObserver:** 웹 프로파일러를 제공하기위해 라이브러리도 따로 배포했습니다. 사실 Sentry는 리액트의 경우 **Profiler Component**를 따로 지원 해주고 이를 이용할까 고민도 했습니다. 하지만 이 한기능을 위해서 리액트를 의존하게 하는것이 너무 과하게 느껴졌고 **PerformanceObserver 라는 기능을 사용하기로 했습니다.** 이를 통해 first Input, paint, long take, largest paint, navigate, layourshift 등등의 performance 요소 를 관측하고 기록해 서버로 보내게 했습니다.
+
+## 회고 및 아쉬운 점
+
+- Redux Thunk를 사용했는데, Redux가 본래의 상태관리 역할 보다는 서버 관련 상태를 다루는 역할의 비중이 더 많았다. 
+  이를 좀 더 분리하면 추후 문제가 생길 시 유지 보수하기 쉬울거라 생각했다. React Query같이 Server State를 분리를 해보고 싶다.
+  
+- Custom hook 패턴을 적용했다. 적용하면서 이 패턴을 잘 쓰려면 변수명 작명을 잘 해 Component에서 그 의도를 알아야 된다 생각했다. 
+  그래서 여러번 수정을 했지만 아직 아쉬운 부분이 있다.
+  
+- 3rd party 라이브러리를 아예 사용하지 않고 라이브러리를 개발하고 싶었는데 시간상의 이유로 하지못해 아쉽다. 
+  이외에도 Performance Observer 자체가 성능을 저하시키는 이슈가 있어, 실제 서비스 중인 웹사이트에 적용시키기 어렵다는 점이 아쉽다. 
+  차라리 도메인을 입력하면 Light house 처럼 점수를 알려주는 방식으로 바꿔보고 싶다.
+
